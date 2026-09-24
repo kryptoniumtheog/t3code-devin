@@ -94,6 +94,10 @@ export interface AcpSessionRuntimeOptions {
     readonly version: string;
   };
   readonly authMethodId: string;
+  /** Defer ACP authentication for CLIs that persist their own signed-in profile. */
+  readonly authenticationMode?: "when-advertised" | "on-demand";
+  /** Identifies a prompt failure that should trigger one deferred authentication attempt. */
+  readonly isAuthenticationFailure?: (error: EffectAcpErrors.AcpError) => boolean;
   readonly mcpServers?: ReadonlyArray<EffectAcpSchema.McpServer>;
   /** Extra workspace roots the agent may read and write besides `cwd`. */
   readonly additionalDirectories?: ReadonlyArray<string>;
@@ -734,18 +738,40 @@ export const make = (
       acp.agent.initialize(initializePayload),
     );
 
+    const authenticateWithAdvertisedMethod = (
+      initializeResult: EffectAcpSchema.InitializeResponse,
+    ): Effect.Effect<void, EffectAcpErrors.AcpError> =>
+      Effect.gen(function* () {
+        const authMethods = initializeResult.authMethods ?? [];
+        const authMethod = authMethods.find((method) => method.id === options.authMethodId);
+        if (!authMethod) {
+          return yield* new EffectAcpErrors.AcpRequestError({
+            code: -32602,
+            errorMessage: `Authentication method '${options.authMethodId}' is not advertised by the agent. Available methods: ${authMethods.map((method) => method.id).join(", ")}`,
+            data: {
+              requestedAuthMethodId: options.authMethodId,
+              availableAuthMethodIds: authMethods.map((method) => method.id),
+            },
+          });
+        }
+        const authenticatePayload = {
+          methodId: authMethod.id,
+        } satisfies EffectAcpSchema.AuthenticateRequest;
+        yield* runLoggedRequest(
+          "authenticate",
+          authenticatePayload,
+          acp.agent.authenticate(authenticatePayload),
+        );
+      });
+
     const startOnce = Effect.gen(function* () {
       const initializeResult = yield* sendInitialize;
-
-      const authenticatePayload = {
-        methodId: options.authMethodId,
-      } satisfies EffectAcpSchema.AuthenticateRequest;
-
-      yield* runLoggedRequest(
-        "authenticate",
-        authenticatePayload,
-        acp.agent.authenticate(authenticatePayload),
-      );
+      if (
+        (initializeResult.authMethods?.length ?? 0) > 0 &&
+        options.authenticationMode !== "on-demand"
+      ) {
+        yield* authenticateWithAdvertisedMethod(initializeResult);
+      }
 
       let sessionId: string;
       let sessionSetupResult:
@@ -1037,11 +1063,24 @@ export const make = (
                   ...payload,
                 } satisfies EffectAcpSchema.PromptRequest;
                 const completed = yield* Deferred.make<void>();
-                const fiber = yield* runLoggedRequest(
-                  "session/prompt",
-                  requestPayload,
-                  acp.agent.prompt(requestPayload),
-                ).pipe(Effect.forkIn(runtimeScope));
+                const runPrompt = () =>
+                  runLoggedRequest(
+                    "session/prompt",
+                    requestPayload,
+                    acp.agent.prompt(requestPayload),
+                  );
+                const fiber = yield* runPrompt().pipe(
+                  Effect.catchIf(
+                    (error) =>
+                      options.authenticationMode === "on-demand" &&
+                      options.isAuthenticationFailure?.(error) === true,
+                    () =>
+                      authenticateWithAdvertisedMethod(started.initializeResult).pipe(
+                        Effect.andThen(runPrompt),
+                      ),
+                  ),
+                  Effect.forkIn(runtimeScope),
+                );
                 const active = { fiber, completed } satisfies AcpActivePrompt;
                 yield* Ref.set(activePromptRef, Option.some(active));
                 if (promptOptions?.dispatched) {
