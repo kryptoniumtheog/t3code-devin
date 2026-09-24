@@ -22,7 +22,8 @@ import * as Path from "effect/Path";
 import * as Schema from "effect/Schema";
 import sharp from "sharp";
 
-type IconVariant = "dev" | "nightly" | "prod";
+type IconVariant = "dev" | "nightly" | "opencode" | "prod";
+type IconSourceVariant = Exclude<IconVariant, "opencode">;
 
 // 108dp at xxxhdpi. Expo's prebuild derives every launcher density bucket from this.
 const ADAPTIVE_CANVAS = 432;
@@ -93,7 +94,7 @@ const solidCanvas = (layer: string, size: number, background: string) =>
 
 const readLayerSource = Effect.fn("androidIcons.readLayerSource")(function* (
   repositoryRoot: string,
-  variant: IconVariant,
+  variant: IconSourceVariant,
   file: string,
 ) {
   const fs = yield* FileSystem.FileSystem;
@@ -133,6 +134,48 @@ const renderDevelopmentBackground = Effect.fn("androidIcons.renderDevelopmentBac
     return yield* composite("dev-background", background, [{ input: overlay }]);
   },
 );
+
+const OPENCODE_COLOR_MAP = {
+  "#061A88": "#4A0000",
+  "#102EBC": "#7F0000",
+  "#1538D0": "#9B111E",
+  "#276AF1": "#D32F2F",
+  "#347FF8": "#E53935",
+  "#65C8FF": "#FF8A80",
+  "#67C2FF": "#FF7A7A",
+  "#BFE9F7": "#FFD0D0",
+  "#D4F6FF": "#FFE2E2",
+  "#D7F4FF": "#FFE0E0",
+  "#D9F7FF": "#FFE5E5",
+  "#DDF7FF": "#FFE5E5",
+  "#F0FCFF": "#FFF4F4",
+  "#F1FCFF": "#FFF7F7",
+} as const;
+
+const recolorForOpenCode = (svg: string) =>
+  Object.entries(OPENCODE_COLOR_MAP).reduce(
+    (result, [source, target]) => result.replaceAll(source, target),
+    svg,
+  );
+
+const renderOpenCodeBackground = Effect.fn("androidIcons.renderOpenCodeBackground")(function* (
+  repositoryRoot: string,
+  size: number,
+) {
+  const annotations = recolorForOpenCode(
+    yield* readLayerSource(repositoryRoot, "dev", "annotations.svg"),
+  );
+  const defs = annotations.match(/<defs>[\s\S]*?<\/defs>/)?.[0] ?? "";
+  const body = annotations.replace(/^[\s\S]*?<\/defs>/, "").replace(/<\/svg>\s*$/, "");
+  const paper = recolorForOpenCode(yield* readLayerSource(repositoryRoot, "dev", "background.svg"));
+  const background = yield* rasterize("opencode-background", fullBleed(paper), size);
+  const overlay = yield* rasterize(
+    "opencode-annotations",
+    canvasSvg(size, `${defs}<g transform="${wordmarkTransform(size)}">${body}</g>`),
+    size,
+  );
+  return yield* composite("opencode-background", background, [{ input: overlay }]);
+});
 
 const renderNightlyBackground = Effect.fn("androidIcons.renderNightlyBackground")(function* (
   repositoryRoot: string,
@@ -192,6 +235,8 @@ const renderBackground = Effect.fn("androidIcons.renderBackground")(function* (
       return yield* renderDevelopmentBackground(repositoryRoot, size);
     case "nightly":
       return yield* renderNightlyBackground(repositoryRoot, size);
+    case "opencode":
+      return yield* renderOpenCodeBackground(repositoryRoot, size);
     case "prod":
       return yield* solidCanvas("prod-background", size, PRODUCTION_BACKGROUND_COLOR);
   }
@@ -204,6 +249,15 @@ const renderSplashIcon = Effect.fn("androidIcons.renderSplashIcon")(function* (
   const background = yield* renderBackground(repositoryRoot, variant, SPLASH_CANVAS);
   const foreground = yield* renderForeground(repositoryRoot, SPLASH_CANVAS);
   return yield* composite(`${variant}-splash`, background, [{ input: foreground }]);
+});
+
+const renderAppIcon = Effect.fn("androidIcons.renderAppIcon")(function* (
+  repositoryRoot: string,
+  variant: IconVariant,
+) {
+  const background = yield* renderBackground(repositoryRoot, variant, 1024);
+  const foreground = yield* renderForeground(repositoryRoot, 1024);
+  return yield* composite(`${variant}-app-icon`, background, [{ input: foreground }]);
 });
 
 const exportAndroidIcons = Effect.gen(function* () {
@@ -220,8 +274,14 @@ const exportAndroidIcons = Effect.gen(function* () {
       "android-icon-background-nightly.png",
       yield* renderNightlyBackground(repositoryRoot, ADAPTIVE_CANVAS),
     ],
+    [
+      "android-icon-background-opencode.png",
+      yield* renderOpenCodeBackground(repositoryRoot, ADAPTIVE_CANVAS),
+    ],
+    ["android-icon-opencode.png", yield* renderAppIcon(repositoryRoot, "opencode")],
     ["android-splash-icon-dev.png", yield* renderSplashIcon(repositoryRoot, "dev")],
     ["android-splash-icon-nightly.png", yield* renderSplashIcon(repositoryRoot, "nightly")],
+    ["android-splash-icon-opencode.png", yield* renderSplashIcon(repositoryRoot, "opencode")],
     ["android-splash-icon-prod.png", yield* renderSplashIcon(repositoryRoot, "prod")],
   ] as const;
   for (const [name, contents] of outputs) {

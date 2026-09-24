@@ -3,7 +3,7 @@ import type { ExpoConfig } from "expo/config";
 import { BRAND_ASSET_PATHS } from "../../scripts/lib/brand-assets.ts";
 import { loadRepoEnv } from "../../scripts/lib/public-config.ts";
 
-type AppVariant = "development" | "preview" | "production";
+type AppVariant = "development" | "opencode" | "preview" | "production";
 
 const repoEnv = loadRepoEnv();
 Object.assign(process.env, repoEnv);
@@ -58,6 +58,19 @@ const PREVIEW_ASSETS = {
   androidNotificationColor: "#347FF8",
 } as const;
 
+const OPENCODE_ASSETS = {
+  appIcon: "./assets/android-icon-opencode.png",
+  iosIcon: "./assets/android-icon-opencode.png",
+  splashIcon: "./assets/android-icon-opencode.png",
+  androidAdaptiveForeground,
+  androidAdaptiveBackgroundColor: "#D32F2F",
+  androidAdaptiveBackgroundImage: "./assets/android-icon-background-opencode.png",
+  androidSplashIcon: "./assets/android-splash-icon-opencode.png",
+  androidMonochromeIcon: "./assets/android-icon-mark.png",
+  androidNotificationIcon: "./assets/android-notification-icon.png",
+  androidNotificationColor: "#D32F2F",
+} as const;
+
 const RELEASE_ASSETS = {
   appIcon: fromRepoRoot(BRAND_ASSET_PATHS.developmentIosIconPng),
   iosIcon: fromRepoRoot(BRAND_ASSET_PATHS.productionIconComposerProject),
@@ -82,11 +95,19 @@ const VARIANT_CONFIG = {
   },
   preview: {
     appName: "T3 Code Devin",
-    scheme: "t3code-preview",
-    iosBundleIdentifier: "com.t3tools.t3code.preview",
-    androidPackage: "com.t3tools.t3code.preview",
+    scheme: "t3code-devin",
+    iosBundleIdentifier: "com.t3tools.t3code.devin",
+    androidPackage: "com.t3tools.t3code.devin",
     relyingParty: "clerk.t3.codes",
     assets: PREVIEW_ASSETS,
+  },
+  opencode: {
+    appName: "T3 Code OpenCode",
+    scheme: "t3code-opencode",
+    iosBundleIdentifier: "com.t3tools.t3code.opencode",
+    androidPackage: "com.t3tools.t3code.opencode",
+    relyingParty: "clerk.t3.codes",
+    assets: OPENCODE_ASSETS,
   },
   production: {
     appName: "T3 Code",
@@ -101,6 +122,7 @@ const VARIANT_CONFIG = {
 function resolveAppVariant(value: string | undefined): AppVariant {
   switch (value) {
     case "development":
+    case "opencode":
     case "preview":
     case "production":
       return value;

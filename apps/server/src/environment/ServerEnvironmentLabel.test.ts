@@ -61,6 +61,18 @@ afterEach(() => {
 });
 
 describe("resolveServerEnvironmentLabel", () => {
+  it.effect("prefers an explicitly configured environment label", () =>
+    Effect.gen(function* () {
+      const result = yield* ServerEnvironmentLabel.resolveServerEnvironmentLabel({
+        cwdBaseName: "t3code",
+        configuredLabel: "  Hel-2 OpenCode  ",
+      }).pipe(Effect.provide(withHostPlatform(TestLayer, "linux", "buildbox")));
+
+      expect(result).toBe("Hel-2 OpenCode");
+      expect(runMock).not.toHaveBeenCalled();
+    }),
+  );
+
   it.effect("uses hostname fallback regardless of launch mode", () =>
     Effect.gen(function* () {
       const result = yield* ServerEnvironmentLabel.resolveServerEnvironmentLabel({

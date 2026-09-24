@@ -190,7 +190,10 @@ export const make = Effect.gen(function* () {
   const hostArchitecture = yield* HostProcessArchitecture;
   const environmentId = yield* identity.getEnvironmentId;
   const cwdBaseName = path.basename(serverConfig.cwd).trim();
-  const label = yield* resolveServerEnvironmentLabel({ cwdBaseName });
+  const label = yield* resolveServerEnvironmentLabel({
+    cwdBaseName,
+    configuredLabel: process.env.T3CODE_ENVIRONMENT_LABEL,
+  });
   const machine = yield* detectServerEnvironmentMachineKind();
   const launcher = yield* resolveServiceLauncherMode();
   const serverSelfUpdate = resolveServerSelfUpdateCapability({

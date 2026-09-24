@@ -8,11 +8,19 @@ const appVariant = Constants.expoConfig?.extra?.appVariant;
 const BRAND_MARK_SOURCE =
   appVariant === "development"
     ? require("../../../../assets/dev/blueprint-ios-1024.png")
-    : appVariant === "preview"
-      ? require("../../../../assets/nightly/nightly-ios-1024.png")
-      : require("../../../../assets/dev/blueprint-ios-1024.png");
+    : appVariant === "opencode"
+      ? require("../../assets/android-icon-opencode.png")
+      : appVariant === "preview"
+        ? require("../../../../assets/dev/blueprint-ios-1024.png")
+        : require("../../../../assets/dev/blueprint-ios-1024.png");
 const DEFAULT_STAGE_LABEL =
-  appVariant === "development" ? "Dev" : appVariant === "preview" ? "Preview" : "Alpha";
+  appVariant === "development"
+    ? "Dev"
+    : appVariant === "opencode"
+      ? "OpenCode"
+      : appVariant === "preview"
+        ? "Devin"
+        : "Alpha";
 
 export function BrandMark(props: { readonly compact?: boolean; readonly stageLabel?: string }) {
   const compact = props.compact ?? false;
