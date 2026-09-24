@@ -1990,9 +1990,9 @@ export function resolveDesktopBuildIconAssets(version: string): DesktopBuildIcon
   }
 
   return {
-    macIconPng: BRAND_ASSET_PATHS.productionMacIconPng,
-    linuxIconPng: BRAND_ASSET_PATHS.productionLinuxIconPng,
-    windowsIconIco: BRAND_ASSET_PATHS.productionWindowsIconIco,
+    macIconPng: BRAND_ASSET_PATHS.developmentDesktopIconPng,
+    linuxIconPng: BRAND_ASSET_PATHS.developmentUniversalIconPng,
+    windowsIconIco: BRAND_ASSET_PATHS.developmentWindowsIconIco,
   };
 }
 

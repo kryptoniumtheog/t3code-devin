@@ -49,14 +49,14 @@ const PREVIEW_ASSETS = {
 } as const;
 
 const RELEASE_ASSETS = {
-  appIcon: fromRepoRoot(BRAND_ASSET_PATHS.productionIosIconPng),
+  appIcon: fromRepoRoot(BRAND_ASSET_PATHS.developmentIosIconPng),
   iosIcon: fromRepoRoot(BRAND_ASSET_PATHS.productionIconComposerProject),
-  splashIcon: fromRepoRoot(BRAND_ASSET_PATHS.productionIosIconPng),
+  splashIcon: fromRepoRoot(BRAND_ASSET_PATHS.developmentIosIconPng),
   androidAdaptiveForeground: "./assets/android-icon-mark.png",
-  androidAdaptiveBackgroundColor: "#000000",
+  androidAdaptiveBackgroundColor: "#347FF8",
   androidMonochromeIcon: "./assets/android-icon-mark.png",
   androidNotificationIcon: "./assets/android-notification-icon.png",
-  androidNotificationColor: "#FFFFFF",
+  androidNotificationColor: "#347FF8",
 } as const;
 
 const VARIANT_CONFIG = {

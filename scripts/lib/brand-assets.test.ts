@@ -10,22 +10,22 @@ import {
 } from "./brand-assets.ts";
 
 describe("brand-assets", () => {
-  it("maps production web assets into the server package", () => {
+  it("maps production web assets to the fork's blue icons", () => {
     expect(resolveWebIconOverrides("production", "dist/client")).toEqual([
       {
-        sourceRelativePath: BRAND_ASSET_PATHS.productionWebFaviconIco,
+        sourceRelativePath: BRAND_ASSET_PATHS.developmentWebFaviconIco,
         targetRelativePath: "dist/client/favicon.ico",
       },
       {
-        sourceRelativePath: BRAND_ASSET_PATHS.productionWebFavicon16Png,
+        sourceRelativePath: BRAND_ASSET_PATHS.developmentWebFavicon16Png,
         targetRelativePath: "dist/client/favicon-16x16.png",
       },
       {
-        sourceRelativePath: BRAND_ASSET_PATHS.productionWebFavicon32Png,
+        sourceRelativePath: BRAND_ASSET_PATHS.developmentWebFavicon32Png,
         targetRelativePath: "dist/client/favicon-32x32.png",
       },
       {
-        sourceRelativePath: BRAND_ASSET_PATHS.productionWebAppleTouchIconPng,
+        sourceRelativePath: BRAND_ASSET_PATHS.developmentWebAppleTouchIconPng,
         targetRelativePath: "dist/client/apple-touch-icon.png",
       },
     ]);
@@ -61,7 +61,7 @@ describe("brand-assets", () => {
 
   it("can target hosted web dist directly", () => {
     expect(resolveWebIconOverrides("production", "apps/web/dist")).toContainEqual({
-      sourceRelativePath: BRAND_ASSET_PATHS.productionWebAppleTouchIconPng,
+      sourceRelativePath: BRAND_ASSET_PATHS.developmentWebAppleTouchIconPng,
       targetRelativePath: "apps/web/dist/apple-touch-icon.png",
     });
   });

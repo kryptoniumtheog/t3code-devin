@@ -71,10 +71,11 @@ const WEB_ICON_SOURCE_PATHS_BY_BRAND = {
     appleTouchIconPng: BRAND_ASSET_PATHS.nightlyWebAppleTouchIconPng,
   },
   production: {
-    faviconIco: BRAND_ASSET_PATHS.productionWebFaviconIco,
-    favicon16Png: BRAND_ASSET_PATHS.productionWebFavicon16Png,
-    favicon32Png: BRAND_ASSET_PATHS.productionWebFavicon32Png,
-    appleTouchIconPng: BRAND_ASSET_PATHS.productionWebAppleTouchIconPng,
+    // This fork deliberately ships the blue T3 mark for release builds.
+    faviconIco: BRAND_ASSET_PATHS.developmentWebFaviconIco,
+    favicon16Png: BRAND_ASSET_PATHS.developmentWebFavicon16Png,
+    favicon32Png: BRAND_ASSET_PATHS.developmentWebFavicon32Png,
+    appleTouchIconPng: BRAND_ASSET_PATHS.developmentWebAppleTouchIconPng,
   },
 } as const satisfies Record<WebAssetBrand, Record<keyof typeof WEB_ICON_TARGET_FILENAMES, string>>;
 
