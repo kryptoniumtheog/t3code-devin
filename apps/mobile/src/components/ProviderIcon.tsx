@@ -2,6 +2,8 @@ import { Image } from "expo-image";
 import { Path, Svg } from "react-native-svg";
 import { View } from "react-native";
 import { providerInstanceInitials } from "@t3tools/client-runtime/state/provider-instance-display";
+import { delegatedProviderDisplayName } from "@t3tools/client-runtime/state/provider-identity";
+import type { ProviderDriverKind } from "@t3tools/contracts";
 import { useAppearancePreferences } from "../features/settings/appearance/AppearancePreferencesProvider";
 import { AppText as Text } from "./AppText";
 
@@ -23,6 +25,17 @@ export function ProviderIcon(props: ProviderIconProps) {
         style={{ width: size, height: size }}
         contentFit="contain"
       />
+    );
+  }
+
+  if (props.provider?.trim().toLowerCase() === "devin") {
+    return (
+      <Svg width={size} height={size} viewBox="0 0 34 34" fill="none">
+        <Path
+          fill={mono}
+          d="M14.117 13.92a3.59 3.59 0 0 0-3.568 0l-2.842 1.653c-.092.046-.185.093-.293.124-.015 0-.046 0-.062.015-.092.016-.2.031-.293.046h-.046c-.093 0-.186-.015-.279-.03h-.046a2 2 0 0 1-.278-.108h-.03l-5.7-3.29a1.32 1.32 0 0 1-.665-1.143v-6.58c0-.48.248-.912.665-1.143l5.7-3.29a1.33 1.33 0 0 1 1.312 0l5.7 3.29h.015a1 1 0 0 1 .278.216c.062.062.123.139.17.216 0 0 .015.016.015.047.047.092.093.185.108.278 0 .015 0 .046.016.061.015.093.046.201.046.31v3.29a3.58 3.58 0 0 0 1.777 3.088 3.59 3.59 0 0 0 3.567 0l2.843-1.652c.092-.047.185-.093.293-.124.015 0 .046 0 .062-.015.092-.016.2-.031.293-.047h.047c.092 0 .185.016.277.031h.047c.093.031.185.062.278.108h.03l5.7 3.29c.402.232.665.664.665 1.143v6.58c0 .479-.248.912-.665 1.143l-5.7 3.29h-.03c-.093.046-.185.093-.278.108H23.2c-.093.016-.186.031-.278.031h-.031a1 1 0 0 1-.294-.046c-.015 0-.046 0-.062-.016-.092-.03-.2-.061-.293-.123L19.4 23.018a3.59 3.59 0 0 0-3.568 0 3.58 3.58 0 0 0-1.776 3.09v3.29a1 1 0 0 1-.047.308c0 .015 0 .046-.015.062-.031.092-.062.185-.108.278 0 0-.016.03-.031.046a1.2 1.2 0 0 1-.17.216l-.03.031a1 1 0 0 1-.248.186h-.015l-5.7 3.29c-.2.123-.432.185-.664.185s-.464-.062-.664-.185l-5.7-3.29A1.32 1.32 0 0 1 0 29.382v-6.58c0-.479.247-.912.664-1.143l5.7-3.29h.03c.093-.046.186-.093.279-.108h.046c.093-.031.185-.031.278-.031h.046c.093 0 .201.015.294.046h.062c.092.031.2.062.293.124l2.842 1.652a3.59 3.59 0 0 0 3.568 0 3.58 3.58 0 0 0 1.776-3.089 3.58 3.58 0 0 0-1.776-3.089v-.015z"
+        />
+      </Svg>
     );
   }
 
@@ -73,12 +86,25 @@ export function ProviderIcon(props: ProviderIconProps) {
     );
   }
 
-  // codex (and unknown drivers)
+  if (props.provider === "codex") {
+    return (
+      <Svg width={size} height={size} viewBox="0 0 256 260" fill="none">
+        <Path
+          fill={mono}
+          d="M239.184 106.203a64.716 64.716 0 0 0-5.576-53.103C219.452 28.459 191 15.784 163.213 21.74A65.586 65.586 0 0 0 52.096 45.22a64.716 64.716 0 0 0-43.23 31.36c-14.31 24.602-11.061 55.634 8.033 76.74a64.665 64.665 0 0 0 5.525 53.102c14.174 24.65 42.644 37.324 70.446 31.36a64.72 64.72 0 0 0 48.754 21.744c28.481.025 53.714-18.361 62.414-45.481a64.767 64.767 0 0 0 43.229-31.36c14.137-24.558 10.875-55.423-8.083-76.483Zm-97.56 136.338a48.397 48.397 0 0 1-31.105-11.255l1.535-.87 51.67-29.825a8.595 8.595 0 0 0 4.247-7.367v-72.85l21.845 12.636c.218.111.37.32.409.563v60.367c-.056 26.818-21.783 48.545-48.601 48.601Zm-104.466-44.61a48.345 48.345 0 0 1-5.781-32.589l1.534.921 51.722 29.826a8.339 8.339 0 0 0 8.441 0l63.181-36.425v25.221a.87.87 0 0 1-.358.665l-52.335 30.184c-23.257 13.398-52.97 5.431-66.404-17.803ZM23.549 85.38a48.499 48.499 0 0 1 25.58-21.333v61.39a8.288 8.288 0 0 0 4.195 7.316l62.874 36.272-21.845 12.636a.819.819 0 0 1-.767 0L41.353 151.53c-23.211-13.454-31.171-43.144-17.804-66.405v.256Zm179.466 41.695-63.08-36.63L161.73 77.86a.819.819 0 0 1 .768 0l52.233 30.184a48.6 48.6 0 0 1-7.316 87.635v-61.391a8.544 8.544 0 0 0-4.4-7.213Zm21.742-32.69-1.535-.922-51.619-30.081a8.39 8.39 0 0 0-8.492 0L99.98 99.808V74.587a.716.716 0 0 1 .307-.665l52.233-30.133a48.652 48.652 0 0 1 72.236 50.391v.205ZM88.061 139.097l-21.845-12.585a.87.87 0 0 1-.41-.614V65.685a48.652 48.652 0 0 1 79.757-37.346l-1.535.87-51.67 29.825a8.595 8.595 0 0 0-4.246 7.367l-.051 72.697Zm11.868-25.58 28.138-16.217 28.188 16.218v32.434l-28.086 16.218-28.188-16.218-.052-32.434Z"
+        />
+      </Svg>
+    );
+  }
+
   return (
-    <Svg width={size} height={size} viewBox="0 0 256 260" fill="none">
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
-        fill={mono}
-        d="M239.184 106.203a64.716 64.716 0 0 0-5.576-53.103C219.452 28.459 191 15.784 163.213 21.74A65.586 65.586 0 0 0 52.096 45.22a64.716 64.716 0 0 0-43.23 31.36c-14.31 24.602-11.061 55.634 8.033 76.74a64.665 64.665 0 0 0 5.525 53.102c14.174 24.65 42.644 37.324 70.446 31.36a64.72 64.72 0 0 0 48.754 21.744c28.481.025 53.714-18.361 62.414-45.481a64.767 64.767 0 0 0 43.229-31.36c14.137-24.558 10.875-55.423-8.083-76.483Zm-97.56 136.338a48.397 48.397 0 0 1-31.105-11.255l1.535-.87 51.67-29.825a8.595 8.595 0 0 0 4.247-7.367v-72.85l21.845 12.636c.218.111.37.32.409.563v60.367c-.056 26.818-21.783 48.545-48.601 48.601Zm-104.466-44.61a48.345 48.345 0 0 1-5.781-32.589l1.534.921 51.722 29.826a8.339 8.339 0 0 0 8.441 0l63.181-36.425v25.221a.87.87 0 0 1-.358.665l-52.335 30.184c-23.257 13.398-52.97 5.431-66.404-17.803ZM23.549 85.38a48.499 48.499 0 0 1 25.58-21.333v61.39a8.288 8.288 0 0 0 4.195 7.316l62.874 36.272-21.845 12.636a.819.819 0 0 1-.767 0L41.353 151.53c-23.211-13.454-31.171-43.144-17.804-66.405v.256Zm179.466 41.695-63.08-36.63L161.73 77.86a.819.819 0 0 1 .768 0l52.233 30.184a48.6 48.6 0 0 1-7.316 87.635v-61.391a8.544 8.544 0 0 0-4.4-7.213Zm21.742-32.69-1.535-.922-51.619-30.081a8.39 8.39 0 0 0-8.492 0L99.98 99.808V74.587a.716.716 0 0 1 .307-.665l52.233-30.133a48.652 48.652 0 0 1 72.236 50.391v.205ZM88.061 139.097l-21.845-12.585a.87.87 0 0 1-.41-.614V65.685a48.652 48.652 0 0 1 79.757-37.346l-1.535.87-51.67 29.825a8.595 8.595 0 0 0-4.246 7.367l-.051 72.697Zm11.868-25.58 28.138-16.217 28.188 16.218v32.434l-28.086 16.218-28.188-16.218-.052-32.434Z"
+        d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Zm0-5v.01M9.1 9a3 3 0 1 1 4.75 2.44C12.7 12.23 12 12.77 12 14"
+        stroke={mono}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </Svg>
   );
@@ -97,44 +123,78 @@ export function ProviderInstanceIcon(props: {
   readonly displayName: string;
   readonly accentColor?: string;
   readonly showBadge?: boolean;
+  readonly delegatedDrivers?: ReadonlyArray<ProviderDriverKind>;
   readonly surfaceColor: string;
 }) {
+  const delegatedDrivers = props.delegatedDrivers ?? [];
+  const accessibilityLabel = [
+    `${props.displayName} controller`,
+    ...delegatedDrivers.map((driver) => `${delegatedProviderDisplayName(driver)} delegated`),
+  ].join(", ");
   return (
-    <View style={{ position: "relative" }}>
-      <View style={{ opacity: 0.6 }}>
-        <ProviderIcon provider={props.provider} size={props.size} />
+    <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={accessibilityLabel}
+      style={{ flexDirection: "row", alignItems: "center", gap: 2 }}
+    >
+      <View style={{ position: "relative" }}>
+        <View style={{ opacity: 0.6 }}>
+          <ProviderIcon provider={props.provider} size={props.size} />
+        </View>
+        {props.showBadge ? (
+          <View
+            className={props.accentColor ? undefined : "bg-card"}
+            style={{
+              position: "absolute",
+              right: -3,
+              bottom: -3,
+              height: 12,
+              minWidth: 12,
+              paddingHorizontal: 2,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: props.surfaceColor,
+              backgroundColor: props.accentColor,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            accessibilityElementsHidden
+          >
+            <Text
+              className={props.accentColor ? undefined : "text-foreground-muted"}
+              style={{
+                fontSize: 7,
+                fontWeight: "600",
+                lineHeight: 9,
+                color: props.accentColor ? "#ffffff" : undefined,
+              }}
+            >
+              {providerInstanceInitials(props.displayName)}
+            </Text>
+          </View>
+        ) : null}
       </View>
-      {props.showBadge ? (
+      {delegatedDrivers.map((driver) => (
         <View
-          className={props.accentColor ? undefined : "bg-card"}
+          key={driver}
+          className="border-border bg-muted"
           style={{
-            position: "absolute",
-            right: -3,
-            bottom: -3,
             height: 12,
             minWidth: 12,
             paddingHorizontal: 2,
-            borderRadius: 999,
+            borderRadius: 3,
             borderWidth: 1,
-            borderColor: props.surfaceColor,
-            backgroundColor: props.accentColor,
             alignItems: "center",
             justifyContent: "center",
           }}
+          accessibilityElementsHidden
         >
-          <Text
-            className={props.accentColor ? undefined : "text-foreground-muted"}
-            style={{
-              fontSize: 7,
-              fontWeight: "600",
-              lineHeight: 9,
-              color: props.accentColor ? "#ffffff" : undefined,
-            }}
-          >
-            {providerInstanceInitials(props.displayName)}
+          <Text className="text-foreground-muted" style={{ fontSize: 7, fontWeight: "700" }}>
+            {providerInstanceInitials(delegatedProviderDisplayName(driver)).slice(0, 1)}
           </Text>
         </View>
-      ) : null}
+      ))}
     </View>
   );
 }

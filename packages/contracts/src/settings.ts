@@ -881,6 +881,130 @@ export const OpenCodeSettings = makeProviderSettingsSchema(
 );
 export type OpenCodeSettings = typeof OpenCodeSettings.Type;
 
+const DevinPermissionMode = Schema.Literals([
+  "normal",
+  "accept-edits",
+  "smart",
+  "dangerous",
+  "autonomous",
+]);
+
+const DevinAgentType = Schema.Literals(["default", "review", "summarizer"]);
+
+export const DevinSettings = makeProviderSettingsSchema(
+  {
+    enabled: Schema.Boolean.pipe(
+      Schema.withDecodingDefault(Effect.succeed(true)),
+      Schema.annotateKey({ providerSettingsForm: { hidden: true } }),
+    ),
+    binaryPath: makeBinaryPathSetting("devin").pipe(
+      Schema.annotateKey({
+        title: "Binary path",
+        description: "Path to the Devin CLI binary (or `devin-desktop` if installed).",
+        providerSettingsForm: {
+          placeholder: "devin or devin-desktop",
+          clearWhenEmpty: "omit",
+        },
+      }),
+    ),
+    homePath: TrimmedString.pipe(
+      Schema.withDecodingDefault(Effect.succeed("")),
+      Schema.annotateKey({
+        title: "Devin home path",
+        description: "Custom Devin home and config directory.",
+        providerSettingsForm: { placeholder: "~/.devin", clearWhenEmpty: "omit" },
+      }),
+    ),
+    configPath: TrimmedString.pipe(
+      Schema.withDecodingDefault(Effect.succeed("")),
+      Schema.annotateKey({
+        title: "Config file",
+        description: "Optional Devin JSON config passed with `devin --config`.",
+        providerSettingsForm: {
+          placeholder: "~/.config/devin/config.json",
+          clearWhenEmpty: "omit",
+        },
+      }),
+    ),
+    agentType: DevinAgentType.pipe(
+      Schema.withDecodingDefault(Effect.succeed("default" as const)),
+      Schema.annotateKey({
+        title: "Agent type",
+        description:
+          "Use Devin's standard coding agent, read-only review agent, or no-tools summarizer.",
+        providerSettingsForm: {
+          control: "select",
+          options: [
+            { value: "default", label: "Default coding agent" },
+            { value: "review", label: "Review (read-only)" },
+            { value: "summarizer", label: "Summarizer (no tools)" },
+          ],
+          clearWhenEmpty: "omit",
+        },
+      }),
+    ),
+    sandbox: Schema.Boolean.pipe(
+      Schema.withDecodingDefault(Effect.succeed(false)),
+      Schema.annotateKey({
+        title: "Process sandbox",
+        description: "Run Devin exec-tool processes in the CLI's research-preview sandbox.",
+        providerSettingsForm: { control: "switch", clearWhenEmpty: "omit" },
+      }),
+    ),
+    respectWorkspaceTrust: Schema.Boolean.pipe(
+      Schema.withDecodingDefault(Effect.succeed(true)),
+      Schema.annotateKey({
+        title: "Respect workspace trust",
+        description: "Keep Devin's workspace trust checks enabled for ACP sessions.",
+        providerSettingsForm: { control: "switch", clearWhenEmpty: "omit" },
+      }),
+    ),
+    launchArgs: TrimmedString.pipe(
+      Schema.withDecodingDefault(Effect.succeed("")),
+      Schema.annotateKey({
+        title: "Launch arguments",
+        description: "Additional CLI arguments passed to `devin acp` on session start.",
+        providerSettingsForm: { placeholder: "e.g. --verbose", clearWhenEmpty: "omit" },
+      }),
+    ),
+    permissionMode: DevinPermissionMode.pipe(
+      Schema.withDecodingDefault(Effect.succeed("normal" as const)),
+      Schema.annotateKey({
+        title: "Permission mode",
+        description: "Permission mode passed to `devin` via DEVIN_PERMISSION_MODE.",
+        providerSettingsForm: {
+          control: "select",
+          options: [
+            { value: "normal", label: "Normal" },
+            { value: "accept-edits", label: "Accept edits" },
+            { value: "smart", label: "Smart" },
+            { value: "dangerous", label: "Dangerous" },
+            { value: "autonomous", label: "Autonomous" },
+          ],
+          clearWhenEmpty: "omit",
+        },
+      }),
+    ),
+    customModels: Schema.Array(CustomModelSetting).pipe(
+      Schema.withDecodingDefault(Effect.succeed([])),
+      Schema.annotateKey({ providerSettingsForm: { hidden: true } }),
+    ),
+  },
+  {
+    order: [
+      "binaryPath",
+      "homePath",
+      "configPath",
+      "agentType",
+      "permissionMode",
+      "sandbox",
+      "respectWorkspaceTrust",
+      "launchArgs",
+    ],
+  },
+);
+export type DevinSettings = typeof DevinSettings.Type;
+
 /**
  * A read-only quota source outside this environment's provider CLIs. The
  * only kind today is a CLIProxyAPI hub, whose management API reports the
@@ -1264,6 +1388,7 @@ export const ServerSettings = Schema.Struct({
     grok: GrokSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
     opencode: OpenCodeSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
     antigravity: AntigravitySettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
+    devin: DevinSettings.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
   }).pipe(Schema.withDecodingDefault(Effect.succeed({}))),
   // New driver-agnostic instance map. Keyed by `ProviderInstanceId`; values
   // are `ProviderInstanceConfig` envelopes. The driver-specific config blob
@@ -1437,6 +1562,19 @@ const OpenCodeSettingsPatch = Schema.Struct({
   customModels: Schema.optionalKey(Schema.Array(CustomModelSetting)),
 });
 
+const DevinSettingsPatch = Schema.Struct({
+  enabled: Schema.optionalKey(Schema.Boolean),
+  binaryPath: Schema.optionalKey(TrimmedString),
+  homePath: Schema.optionalKey(TrimmedString),
+  configPath: Schema.optionalKey(TrimmedString),
+  agentType: Schema.optionalKey(DevinAgentType),
+  sandbox: Schema.optionalKey(Schema.Boolean),
+  respectWorkspaceTrust: Schema.optionalKey(Schema.Boolean),
+  launchArgs: Schema.optionalKey(TrimmedString),
+  permissionMode: Schema.optionalKey(DevinPermissionMode),
+  customModels: Schema.optionalKey(Schema.Array(CustomModelSetting)),
+});
+
 export const ServerSettingsPatch = Schema.Struct({
   worktreeCleanup: Schema.optionalKey(
     Schema.NullOr(
@@ -1539,6 +1677,7 @@ export const ServerSettingsPatch = Schema.Struct({
       grok: Schema.optionalKey(GrokSettingsPatch),
       opencode: Schema.optionalKey(OpenCodeSettingsPatch),
       antigravity: Schema.optionalKey(AntigravitySettingsPatch),
+      devin: Schema.optionalKey(DevinSettingsPatch),
     }),
   ),
   // Whole-map replacement for the new instance config. Patching individual

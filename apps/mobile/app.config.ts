@@ -3,7 +3,7 @@ import type { ExpoConfig } from "expo/config";
 import { BRAND_ASSET_PATHS } from "../../scripts/lib/brand-assets.ts";
 import { loadRepoEnv } from "../../scripts/lib/public-config.ts";
 
-type AppVariant = "development" | "preview" | "production";
+type AppVariant = "development" | "opencode" | "preview" | "production";
 
 const repoEnv = loadRepoEnv();
 Object.assign(process.env, repoEnv);
@@ -46,29 +46,42 @@ const DEVELOPMENT_ASSETS = {
 } as const;
 
 const PREVIEW_ASSETS = {
-  appIcon: fromRepoRoot(BRAND_ASSET_PATHS.nightlyIosIconPng),
-  iosIcon: fromRepoRoot(BRAND_ASSET_PATHS.nightlyIconComposerProject),
-  splashIcon: fromRepoRoot(BRAND_ASSET_PATHS.nightlyIosIconPng),
+  appIcon: fromRepoRoot(BRAND_ASSET_PATHS.developmentIosIconPng),
+  iosIcon: fromRepoRoot(BRAND_ASSET_PATHS.developmentIconComposerProject),
+  splashIcon: fromRepoRoot(BRAND_ASSET_PATHS.developmentIosIconPng),
   androidAdaptiveForeground,
-  androidAdaptiveBackgroundColor: "#111533",
-  androidAdaptiveBackgroundImage: "./assets/android-icon-background-nightly.png",
-  androidSplashIcon: "./assets/android-splash-icon-nightly.png",
+  androidAdaptiveBackgroundColor: "#347FF8",
+  androidAdaptiveBackgroundImage: "./assets/android-icon-background-dev.png",
+  androidSplashIcon: "./assets/android-splash-icon-dev.png",
   androidMonochromeIcon: "./assets/android-icon-mark.png",
   androidNotificationIcon: "./assets/android-notification-icon.png",
-  androidNotificationColor: "#7565C7",
+  androidNotificationColor: "#347FF8",
+} as const;
+
+const OPENCODE_ASSETS = {
+  appIcon: "./assets/android-icon-opencode.png",
+  iosIcon: "./assets/android-icon-opencode.png",
+  splashIcon: "./assets/android-icon-opencode.png",
+  androidAdaptiveForeground,
+  androidAdaptiveBackgroundColor: "#D32F2F",
+  androidAdaptiveBackgroundImage: "./assets/android-icon-background-opencode.png",
+  androidSplashIcon: "./assets/android-splash-icon-opencode.png",
+  androidMonochromeIcon: "./assets/android-icon-mark.png",
+  androidNotificationIcon: "./assets/android-notification-icon.png",
+  androidNotificationColor: "#D32F2F",
 } as const;
 
 const RELEASE_ASSETS = {
-  appIcon: fromRepoRoot(BRAND_ASSET_PATHS.productionIosIconPng),
+  appIcon: fromRepoRoot(BRAND_ASSET_PATHS.developmentIosIconPng),
   iosIcon: fromRepoRoot(BRAND_ASSET_PATHS.productionIconComposerProject),
-  splashIcon: fromRepoRoot(BRAND_ASSET_PATHS.productionIosIconPng),
+  splashIcon: fromRepoRoot(BRAND_ASSET_PATHS.developmentIosIconPng),
   androidAdaptiveForeground,
-  androidAdaptiveBackgroundColor: "#000000",
-  androidAdaptiveBackgroundImage: undefined,
-  androidSplashIcon: "./assets/android-splash-icon-prod.png",
+  androidAdaptiveBackgroundColor: "#347FF8",
+  androidAdaptiveBackgroundImage: "./assets/android-icon-background-dev.png",
+  androidSplashIcon: "./assets/android-splash-icon-dev.png",
   androidMonochromeIcon: "./assets/android-icon-mark.png",
   androidNotificationIcon: "./assets/android-notification-icon.png",
-  androidNotificationColor: "#FFFFFF",
+  androidNotificationColor: "#347FF8",
 } as const;
 
 const VARIANT_CONFIG = {
@@ -81,12 +94,20 @@ const VARIANT_CONFIG = {
     assets: DEVELOPMENT_ASSETS,
   },
   preview: {
-    appName: "T3 Code Preview",
-    scheme: "t3code-preview",
-    iosBundleIdentifier: "com.t3tools.t3code.preview",
-    androidPackage: "com.t3tools.t3code.preview",
+    appName: "T3 Code Devin",
+    scheme: "t3code-devin",
+    iosBundleIdentifier: "com.t3tools.t3code.devin",
+    androidPackage: "com.t3tools.t3code.devin",
     relyingParty: "clerk.t3.codes",
     assets: PREVIEW_ASSETS,
+  },
+  opencode: {
+    appName: "T3 Code OpenCode",
+    scheme: "t3code-opencode",
+    iosBundleIdentifier: "com.t3tools.t3code.opencode",
+    androidPackage: "com.t3tools.t3code.opencode",
+    relyingParty: "clerk.t3.codes",
+    assets: OPENCODE_ASSETS,
   },
   production: {
     appName: "T3 Code",
@@ -101,6 +122,7 @@ const VARIANT_CONFIG = {
 function resolveAppVariant(value: string | undefined): AppVariant {
   switch (value) {
     case "development":
+    case "opencode":
     case "preview":
     case "production":
       return value;

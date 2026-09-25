@@ -79,6 +79,7 @@ import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 import { sourceControlRepositorySelector } from "@t3tools/shared/sourceControl";
 import { truncate } from "@t3tools/shared/String";
 import { resolveThreadReferenceCopyTarget } from "@t3tools/shared/threadReference";
+import { resolveWebThreadProviderIdentity } from "./threadProviderIdentity";
 import {
   getTerminalLabel,
   nextTerminalId,
@@ -2863,6 +2864,17 @@ export default function ChatView(props: ChatViewProps) {
       ),
     [providerStatuses, settings],
   );
+  const activeThreadProviderIdentity = useMemo(() => {
+    if (!activeThread) return null;
+    const identity = resolveWebThreadProviderIdentity(activeThread, providerInstanceEntries);
+    return {
+      driverKind: identity.driverKind,
+      displayName: identity.displayName,
+      accentColor: identity.controller?.accentColor,
+      showBadge: identity.showBadge,
+      delegatedDrivers: identity.delegatedDrivers,
+    };
+  }, [activeThread, providerInstanceEntries]);
   const { selectedProviderEntry, requestedDriverKind } = useMemo(
     () =>
       resolveComposerProviderSelection({
@@ -9827,6 +9839,7 @@ export default function ChatView(props: ChatViewProps) {
             activeThreadId={activeThread.id}
             {...(routeKind === "draft" && draftId ? { draftId } : {})}
             activeThreadTitle={activeThread.title}
+            providerIdentity={activeThreadProviderIdentity}
             isServerThread={isServerThread}
             activeProject={activeProject}
             openInCwd={gitCwd}

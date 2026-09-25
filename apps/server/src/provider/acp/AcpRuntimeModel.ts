@@ -11,6 +11,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function finiteNonNegativeInteger(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  const integer = Math.floor(value);
+  return integer >= 0 ? integer : undefined;
+}
+
 function isSessionModelState(value: unknown): value is EffectAcpSchema.SessionModelState {
   if (!isRecord(value) || typeof value.currentModelId !== "string") {
     return false;
@@ -122,6 +128,16 @@ export type AcpParsedSessionEvent =
   | {
       readonly _tag: "ThoughtDelta";
       readonly text: string;
+      readonly rawPayload: unknown;
+    }
+  | {
+      readonly _tag: "UsageUpdated";
+      readonly used: number;
+      readonly size: number;
+      readonly cost: number | null;
+      readonly inputTokens: number | undefined;
+      readonly outputTokens: number | undefined;
+      readonly cachedReadTokens: number | undefined;
       readonly rawPayload: unknown;
     };
 
@@ -877,6 +893,20 @@ export function parseSessionUpdateEvent(params: EffectAcpSchema.SessionNotificat
           rawPayload: params,
         });
       }
+      break;
+    }
+    case "usage_update": {
+      const meta = isRecord(upd._meta) ? upd._meta : {};
+      events.push({
+        _tag: "UsageUpdated",
+        used: finiteNonNegativeInteger(upd.used) ?? 0,
+        size: finiteNonNegativeInteger(upd.size) ?? 0,
+        cost: upd.cost && typeof upd.cost.amount === "number" ? upd.cost.amount : null,
+        inputTokens: finiteNonNegativeInteger(meta["cognition.ai/inputTokens"]),
+        outputTokens: finiteNonNegativeInteger(meta["cognition.ai/outputTokens"]),
+        cachedReadTokens: finiteNonNegativeInteger(meta["cognition.ai/cachedReadTokens"]),
+        rawPayload: params,
+      });
       break;
     }
     default:

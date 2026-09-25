@@ -2,6 +2,7 @@ import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell
 import {
   EnvironmentId,
   ProjectId,
+  ProviderDriverKind,
   ProviderInstanceId,
   ThreadId,
   type ServerConfig,
@@ -61,11 +62,12 @@ describe("resolveThreadProviderInstance", () => {
       [environmentB, makeConfig([{ instanceId: "codex", driver: "codex" }])],
     ]);
 
-    const threadA = makeThread(environmentA, "codex");
-    const threadB = makeThread(environmentB, "codex");
-
-    expect(resolveThreadProviderInstance(serverConfigs, threadA)?.accentColor).toBe("#ff8800");
-    expect(resolveThreadProviderInstance(serverConfigs, threadB)?.accentColor).toBeUndefined();
+    expect(
+      resolveThreadProviderInstance(serverConfigs, makeThread(environmentA, "codex"))?.accentColor,
+    ).toBe("#ff8800");
+    expect(
+      resolveThreadProviderInstance(serverConfigs, makeThread(environmentB, "codex"))?.accentColor,
+    ).toBeUndefined();
   });
 
   it("labels a custom instance by its id so its initials differ from the default", () => {
@@ -94,9 +96,45 @@ describe("resolveThreadProviderInstance", () => {
     const serverConfigs = new Map<EnvironmentId, ServerConfig>([
       [environmentId, makeConfig([{ instanceId: "codex", driver: "codex" }])],
     ]);
-    const thread = makeThread(environmentId, "codex");
+    expect(
+      resolveThreadProviderInstance(serverConfigs, makeThread(environmentId, "codex"))?.showBadge,
+    ).toBe(false);
+  });
 
-    expect(resolveThreadProviderInstance(serverConfigs, thread)?.showBadge).toBe(false);
+  it("keeps the model-selected controller when the live session is delegated", () => {
+    const environmentId = EnvironmentId.make("environment-a");
+    const serverConfigs = new Map<EnvironmentId, ServerConfig>([
+      [environmentId, makeConfig([{ instanceId: "codex", driver: "codex" }])],
+    ]);
+    const thread = {
+      ...makeThread(environmentId, "codex"),
+      session: { providerInstanceId: ProviderInstanceId.make("devin") },
+      providerIdentity: {
+        controllerInstanceId: ProviderInstanceId.make("codex"),
+        controllerDriver: ProviderDriverKind.make("codex"),
+        delegatedDrivers: [ProviderDriverKind.make("devin")],
+      },
+    } as unknown as EnvironmentThreadShell;
+
+    expect(resolveThreadProviderInstance(serverConfigs, thread)).toMatchObject({
+      driverKind: "codex",
+      delegatedDrivers: ["devin"],
+    });
+  });
+
+  it("uses a neutral identity for an unconfigured controller", () => {
+    const environmentId = EnvironmentId.make("environment-a");
+    const serverConfigs = new Map<EnvironmentId, ServerConfig>([
+      [environmentId, makeConfig([{ instanceId: "codex", driver: "codex" }])],
+    ]);
+    expect(
+      resolveThreadProviderInstance(serverConfigs, makeThread(environmentId, "ghost")),
+    ).toEqual({
+      driverKind: null,
+      displayName: "Unknown provider",
+      showBadge: false,
+      delegatedDrivers: [],
+    });
   });
 });
 
@@ -116,8 +154,6 @@ describe("createThreadRowProviderInstanceResolver", () => {
     const resolve = createThreadRowProviderInstanceResolver(serverConfigs);
     const first = resolve(makeThread(environmentId, "codex"));
     const second = resolve(makeThread(environmentId, "codex"));
-    // Memoized rows compare props by reference: a fresh object per call would
-    // re-render every row on every parent render (minute tick included).
     expect(first).not.toBeNull();
     expect(second).toBe(first);
   });
@@ -143,9 +179,10 @@ describe("createThreadRowProviderInstanceResolver", () => {
     );
   });
 
-  it("resolves unknown instances to null without throwing", () => {
+  it("memoizes neutral identities for unknown instances", () => {
     const resolve = createThreadRowProviderInstanceResolver(serverConfigs);
-    expect(resolve(makeThread(environmentId, "ghost"))).toBeNull();
-    expect(resolve(makeThread(environmentId, "ghost"))).toBeNull();
+    const first = resolve(makeThread(environmentId, "ghost"));
+    expect(first).toMatchObject({ driverKind: null, displayName: "Unknown provider" });
+    expect(resolve(makeThread(environmentId, "ghost"))).toBe(first);
   });
 });
