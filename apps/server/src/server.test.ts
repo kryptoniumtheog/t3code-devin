@@ -8496,6 +8496,13 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
         layers: {
           projectionSnapshotQuery: {
             getSnapshot: () => Effect.succeed(snapshot),
+            getThreadDetailSnapshot: () =>
+              Effect.succeed(
+                Option.some({
+                  snapshotSequence: snapshot.snapshotSequence,
+                  thread: snapshot.threads[0]!,
+                }),
+              ),
             searchThreads: () =>
               Effect.succeed({
                 matches: [
@@ -8508,6 +8515,17 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
                   },
                 ],
               }),
+          },
+          providerSessionDirectory: {
+            getBinding: () =>
+              Effect.succeed(
+                Option.some({
+                  threadId: ThreadId.make("thread-1"),
+                  provider: ProviderDriverKind.make("codex"),
+                  providerInstanceId: defaultModelSelection.instanceId,
+                  resumeCursor: { threadId: "provider-session-distinct" },
+                }),
+              ),
           },
           orchestrationEngine: {
             dispatch: () => Effect.succeed({ sequence: 7 }),
@@ -8582,6 +8600,26 @@ it.layer(NodeServices.layer)("server router seam", (it) => {
           messageCreatedAt: now,
         },
       ]);
+
+      const identity = yield* Effect.scoped(
+        withWsRpcClient(wsUrl, (client) =>
+          client[ORCHESTRATION_WS_METHODS.getThreadIdentity]({
+            threadId: ThreadId.make("thread-1"),
+          }),
+        ),
+      );
+      assert.deepEqual(identity, {
+        controllerThreadId: ThreadId.make("thread-1"),
+        canonicalSnapshotThreadId: ThreadId.make("thread-1"),
+        provider: ProviderDriverKind.make("codex"),
+        providerInstanceId: defaultModelSelection.instanceId,
+        providerSessionId: "provider-session-distinct",
+        ui: {
+          surface: "t3-code",
+          environmentId: testEnvironmentDescriptor.environmentId,
+          routeThreadId: ThreadId.make("thread-1"),
+        },
+      });
     }).pipe(Effect.provide(NodeHttpServer.layerTest)),
   );
 
