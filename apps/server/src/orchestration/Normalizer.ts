@@ -1,4 +1,5 @@
 import * as DateTime from "effect/DateTime";
+import * as Clock from "effect/Clock";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
@@ -22,6 +23,7 @@ import {
 import { ServerConfig } from "../config.ts";
 import { parseBase64DataUrl } from "../imageMime.ts";
 import * as WorkspacePaths from "../workspace/WorkspacePaths.ts";
+import { modelSubscriptionGuardFailure } from "./modelSubscriptionGuard.ts";
 
 export const canonicalizeClientCommandTimestamps = (
   command: ClientOrchestrationCommand,
@@ -82,6 +84,15 @@ export const normalizeDispatchCommand = (command: ClientOrchestrationCommand) =>
     const path = yield* Path.Path;
     const serverConfig = yield* ServerConfig;
     const workspacePaths = yield* WorkspacePaths.WorkspacePaths;
+
+    const modelGuardFailure = modelSubscriptionGuardFailure(
+      canonicalCommand,
+      process.env,
+      yield* Clock.currentTimeMillis,
+    );
+    if (modelGuardFailure) {
+      return yield* new OrchestrationDispatchCommandError({ message: modelGuardFailure });
+    }
 
     const normalizeProjectWorkspaceRoot = (workspaceRoot: string) =>
       workspacePaths.normalizeWorkspaceRoot(workspaceRoot).pipe(
