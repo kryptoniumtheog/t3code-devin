@@ -38,6 +38,7 @@ import type * as EffectAcpSchema from "effect-acp/schema";
 import { resolveAttachmentPath } from "../../attachmentStore.ts";
 import { ServerConfig } from "../../config.ts";
 import * as McpProviderSession from "../../mcp/McpProviderSession.ts";
+import { modelSubscriptionReceiptFailure } from "../../orchestration/modelSubscriptionGuard.ts";
 import {
   type ProviderAdapterError,
   ProviderAdapterProcessError,
@@ -1049,6 +1050,22 @@ export const makeDevinAdapter = Effect.fn("makeDevinAdapter")(function* (
           mapError: (cause) =>
             mapAcpToAdapterError(PROVIDER, input.threadId, "session/set_config_option", cause),
         });
+        const receiptFailure = modelSubscriptionReceiptFailure(
+          devinModelSelection,
+          {
+            instanceId: boundInstanceId,
+            model: boundModel?.familySlug,
+          },
+          options?.environment ?? process.env,
+          Date.now(),
+        );
+        if (receiptFailure) {
+          return yield* new ProviderAdapterValidationError({
+            provider: PROVIDER,
+            operation: "startSession",
+            issue: receiptFailure,
+          });
+        }
 
         const now = yield* nowIso;
         const sessionModel =
@@ -1399,6 +1416,22 @@ export const makeDevinAdapter = Effect.fn("makeDevinAdapter")(function* (
               mapError: (cause) =>
                 mapAcpToAdapterError(PROVIDER, input.threadId, "session/set_config_option", cause),
             });
+            const receiptFailure = modelSubscriptionReceiptFailure(
+              turnModelSelection,
+              {
+                instanceId: boundInstanceId,
+                model: currentModel?.familySlug,
+              },
+              options?.environment ?? process.env,
+              Date.now(),
+            );
+            if (receiptFailure) {
+              return yield* new ProviderAdapterValidationError({
+                provider: PROVIDER,
+                operation: "sendTurn",
+                issue: receiptFailure,
+              });
+            }
 
             ctx.currentModelId = currentModel?.familySlug;
             ctx.currentReasoningValue = currentModel?.reasoningValue;

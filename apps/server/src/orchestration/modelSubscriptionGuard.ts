@@ -3,6 +3,11 @@ type GuardedModelSelection = {
   readonly model?: string | undefined;
 };
 
+type GuardedModelBinding = {
+  readonly instanceId?: string | undefined;
+  readonly model?: string | undefined;
+};
+
 type GuardedCommand = {
   readonly type: string;
   readonly modelSelection?: GuardedModelSelection | null | undefined;
@@ -21,7 +26,7 @@ const ENABLED = "T3_EC_MODEL_GUARD_ROUTE";
 const OPENCODE_PROVIDER = "opencode";
 const OPENCODE_MODEL = "opencode-go/muse-spark-1.3-contributor";
 const DEVIN_PROVIDER = "devin";
-const DEVIN_SWE2_FREE_MODEL: string | null = null;
+const DEVIN_SWE2_FREE_MODEL = "swe-2-high";
 const DEVIN_ELIGIBLE_UNTIL_EPOCH_MS = 1_791_676_800_000;
 
 export const isDevinEligibilityExpired = (nowEpochMs: number) =>
@@ -42,10 +47,6 @@ export function modelSubscriptionGuardFailure(
     return "Model subscription guard rejected an unknown route.";
   }
 
-  if (route === "devin-swe2-free" && DEVIN_SWE2_FREE_MODEL === null) {
-    return "Model subscription guard rejected an unproved provider/model identity.";
-  }
-
   if (route === "devin-swe2-free" && isDevinEligibilityExpired(nowEpochMs)) {
     return "Devin SWE-2 Free eligibility is expired.";
   }
@@ -58,6 +59,32 @@ export function modelSubscriptionGuardFailure(
   const expectedModel = route === "opencode-go-muse" ? OPENCODE_MODEL : DEVIN_SWE2_FREE_MODEL;
   if (selected.instanceId !== expectedProvider || selected.model !== expectedModel) {
     return "Model subscription guard rejected a provider/model mismatch or alias.";
+  }
+
+  return null;
+}
+
+export function modelSubscriptionReceiptFailure(
+  requested: GuardedModelSelection | null | undefined,
+  observed: GuardedModelBinding | null | undefined,
+  environment: GuardEnvironment,
+  nowEpochMs: number,
+): string | null {
+  const route = environment[ENABLED]?.trim();
+  if (!route) return null;
+
+  const preflightFailure = modelSubscriptionGuardFailure(
+    { type: "thread.turn.start", modelSelection: requested },
+    environment,
+    nowEpochMs,
+  );
+  if (preflightFailure) return preflightFailure;
+
+  if (!observed?.instanceId || !observed.model) {
+    return "Model subscription receipt guard requires an observed provider and model.";
+  }
+  if (observed.instanceId !== requested?.instanceId || observed.model !== requested.model) {
+    return "Model subscription receipt guard rejected an observed provider/model mismatch.";
   }
 
   return null;
