@@ -5,7 +5,7 @@ import * as SchemaTransformation from "effect/SchemaTransformation";
 import * as Struct from "effect/Struct";
 import { OrchestrationMessageContext } from "./composerContext.ts";
 import { ProviderOptionSelections } from "./model.ts";
-import { RepositoryIdentity, ThreadEnvMode } from "./environment.ts";
+import { EnvironmentId, RepositoryIdentity, ThreadEnvMode } from "./environment.ts";
 import {
   ApprovalRequestId,
   CheckpointRef,
@@ -39,6 +39,7 @@ export const ORCHESTRATION_WS_METHODS = {
   getFullThreadDiff: "orchestration.getFullThreadDiff",
   searchThreads: "orchestration.searchThreads",
   getArchivedShellSnapshot: "orchestration.getArchivedShellSnapshot",
+  getThreadIdentity: "orchestration.getThreadIdentity",
   subscribeShell: "orchestration.subscribeShell",
   subscribeThread: "orchestration.subscribeThread",
 } as const;
@@ -1092,6 +1093,48 @@ export const OrchestrationThreadDetailSnapshot = Schema.Struct({
   page: Schema.optional(OrchestrationThreadDetailPage),
 });
 export type OrchestrationThreadDetailSnapshot = typeof OrchestrationThreadDetailSnapshot.Type;
+
+/**
+ * Server-owned identity crosswalk for one T3 Code conversation. The caller
+ * supplies only the controller thread id used to address the existing thread;
+ * provider and UI identities are resolved from authoritative server state.
+ */
+export const OrchestrationThreadIdentity = Schema.Struct({
+  controllerThreadId: ThreadId,
+  canonicalSnapshotThreadId: ThreadId,
+  provider: ProviderDriverKind,
+  providerInstanceId: ProviderInstanceId,
+  providerSessionId: TrimmedNonEmptyString,
+  ui: Schema.Struct({
+    surface: Schema.Literal("t3-code"),
+    environmentId: EnvironmentId,
+    routeThreadId: ThreadId,
+  }),
+});
+export type OrchestrationThreadIdentity = typeof OrchestrationThreadIdentity.Type;
+
+export const OrchestrationGetThreadIdentityInput = Schema.Struct({
+  threadId: ThreadId,
+});
+export type OrchestrationGetThreadIdentityInput = typeof OrchestrationGetThreadIdentityInput.Type;
+
+export class OrchestrationGetThreadIdentityError extends Schema.TaggedError<OrchestrationGetThreadIdentityError>()(
+  "OrchestrationGetThreadIdentityError",
+  {
+    threadId: ThreadId,
+    reason: Schema.Literals([
+      "thread-not-found",
+      "provider-binding-unavailable",
+      "provider-session-unavailable",
+      "provider-session-unsupported",
+    ]),
+    cause: Schema.optional(Schema.Defect()),
+  },
+) {
+  override get message(): string {
+    return `Thread identity is unavailable for '${this.threadId}' (${this.reason}).`;
+  }
+}
 
 export const ProjectCreateCommand = Schema.Struct({
   type: Schema.Literal("project.create"),
@@ -2377,6 +2420,10 @@ export const OrchestrationRpcSchemas = {
   getArchivedShellSnapshot: {
     input: Schema.Struct({}),
     output: OrchestrationShellSnapshot,
+  },
+  getThreadIdentity: {
+    input: OrchestrationGetThreadIdentityInput,
+    output: OrchestrationThreadIdentity,
   },
   subscribeThread: {
     input: OrchestrationSubscribeThreadInput,

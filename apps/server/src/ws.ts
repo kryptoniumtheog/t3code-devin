@@ -43,6 +43,7 @@ import {
   type OrchestrationShellStreamItem,
   OrchestrationGetFullThreadDiffError,
   OrchestrationGetSnapshotError,
+  OrchestrationGetThreadIdentityError,
   OrchestrationSearchThreadsError,
   OrchestrationGetTurnDiffError,
   ORCHESTRATION_WS_METHODS,
@@ -113,6 +114,7 @@ import * as ModelManifest from "./provider/ModelManifest.ts";
 import * as ProviderMaintenance from "./provider/providerMaintenance.ts";
 import * as ProviderService from "./provider/Services/ProviderService.ts";
 import * as ProviderSessionDirectory from "./provider/Services/ProviderSessionDirectory.ts";
+import { resolveProviderSessionIdentity } from "./provider/providerSessionIdentity.ts";
 import * as ProviderMaintenanceRunner from "./provider/providerMaintenanceRunner.ts";
 import { ProviderAuthService } from "./provider/Services/ProviderAuthService.ts";
 import { ProviderInstanceRegistry } from "./provider/Services/ProviderInstanceRegistry.ts";
@@ -2183,6 +2185,71 @@ const makeWsRpcLayer = (
                   }),
               ),
             ),
+            { "rpc.aggregate": "orchestration" },
+          ),
+        [ORCHESTRATION_WS_METHODS.getThreadIdentity]: (input) =>
+          observeRpcEffect(
+            ORCHESTRATION_WS_METHODS.getThreadIdentity,
+            Effect.gen(function* () {
+              const snapshot = yield* projectionSnapshotQuery
+                .getThreadDetailSnapshot(input.threadId)
+                .pipe(
+                  Effect.mapError(
+                    (cause) =>
+                      new OrchestrationGetThreadIdentityError({
+                        threadId: input.threadId,
+                        reason: "thread-not-found",
+                        cause,
+                      }),
+                  ),
+                );
+              if (Option.isNone(snapshot)) {
+                return yield* new OrchestrationGetThreadIdentityError({
+                  threadId: input.threadId,
+                  reason: "thread-not-found",
+                });
+              }
+
+              const binding = yield* providerSessionDirectory.getBinding(input.threadId).pipe(
+                Effect.mapError(
+                  (cause) =>
+                    new OrchestrationGetThreadIdentityError({
+                      threadId: input.threadId,
+                      reason: "provider-binding-unavailable",
+                      cause,
+                    }),
+                ),
+              );
+              if (Option.isNone(binding) || binding.value.providerInstanceId === undefined) {
+                return yield* new OrchestrationGetThreadIdentityError({
+                  threadId: input.threadId,
+                  reason: "provider-binding-unavailable",
+                });
+              }
+
+              const providerIdentity = resolveProviderSessionIdentity(binding.value);
+              if (!providerIdentity.ok) {
+                return yield* new OrchestrationGetThreadIdentityError({
+                  threadId: input.threadId,
+                  reason: providerIdentity.reason,
+                });
+              }
+
+              const canonicalSnapshotThreadId = snapshot.value.thread.id;
+              const environmentId = yield* serverEnvironment.getEnvironmentId;
+              return {
+                controllerThreadId: input.threadId,
+                canonicalSnapshotThreadId,
+                provider: binding.value.provider,
+                providerInstanceId: binding.value.providerInstanceId,
+                providerSessionId: providerIdentity.providerSessionId,
+                ui: {
+                  surface: "t3-code" as const,
+                  environmentId,
+                  routeThreadId: canonicalSnapshotThreadId,
+                },
+              };
+            }),
             { "rpc.aggregate": "orchestration" },
           ),
         [ORCHESTRATION_WS_METHODS.subscribeThread]: (input) =>
