@@ -2,6 +2,7 @@ import {
   type EnvironmentId,
   type EditorId,
   type ProjectScript,
+  type ProviderDriverKind,
   type ResolvedKeybindingsConfig,
   type ThreadId,
 } from "@t3tools/contracts";
@@ -52,12 +53,20 @@ import { cn } from "~/lib/utils";
 import { useIsMobile } from "~/hooks/useMediaQuery";
 import { Button } from "../ui/button";
 import { Menu, MenuPopup, MenuSeparator, MenuTrigger } from "../ui/menu";
+import { ProviderInstanceIcon } from "./ProviderInstanceIcon";
 
 interface ChatHeaderProps {
   activeThreadEnvironmentId: EnvironmentId;
   activeThreadId: ThreadId;
   draftId?: DraftId;
   activeThreadTitle: string;
+  providerIdentity: {
+    readonly driverKind: ProviderDriverKind | null;
+    readonly displayName: string;
+    readonly accentColor?: string | undefined;
+    readonly showBadge: boolean;
+    readonly delegatedDrivers: ReadonlyArray<ProviderDriverKind>;
+  } | null;
   /** Drafts have no server thread yet, so the title carries no action menu. */
   isServerThread: boolean;
   activeProject: EnvironmentProject | null;
@@ -128,6 +137,7 @@ export const ChatHeader = memo(function ChatHeader({
   activeThreadId,
   draftId,
   activeThreadTitle,
+  providerIdentity,
   isServerThread,
   activeProject,
   openInCwd,
@@ -486,6 +496,18 @@ export const ChatHeader = memo(function ChatHeader({
             </Tooltip>
           )}
         </WorkspaceBreadcrumbItem>
+        {providerIdentity ? (
+          <ProviderInstanceIcon
+            className="ml-1"
+            driverKind={providerIdentity.driverKind}
+            displayName={providerIdentity.displayName}
+            accentColor={providerIdentity.accentColor}
+            showBadge={providerIdentity.showBadge}
+            delegatedDrivers={providerIdentity.delegatedDrivers}
+            iconClassName="size-4 opacity-70"
+            badgeClassName="right-[-0.1875rem] bottom-[-0.1875rem] h-3 min-w-3 px-0.5 text-[7px]"
+          />
+        ) : null}
       </WorkspaceBreadcrumb>
       <div
         ref={headerActionsRef}

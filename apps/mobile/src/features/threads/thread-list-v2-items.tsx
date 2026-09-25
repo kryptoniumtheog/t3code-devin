@@ -1005,6 +1005,7 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
             displayName={props.providerInstance.displayName}
             accentColor={props.providerInstance.accentColor}
             showBadge={props.providerInstance.showBadge}
+            delegatedDrivers={props.providerInstance.delegatedDrivers}
             surfaceColor={rowAppearance.providerIconSurfaceColor}
           />
         ) : null}

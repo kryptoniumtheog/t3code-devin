@@ -6,14 +6,16 @@ import {
   resolveProviderInstanceDisplayName,
   shouldShowInstanceBadge,
 } from "@t3tools/client-runtime/state/provider-instance-display";
+import { resolveThreadProviderIdentity } from "@t3tools/client-runtime/state/provider-identity";
 import type { EnvironmentId, ProviderDriverKind, ServerConfig } from "@t3tools/contracts";
 
 /** What a thread row needs to draw the provider glyph and its account badge. */
 export interface ThreadRowProviderInstance {
-  readonly driverKind: ProviderDriverKind;
+  readonly driverKind: ProviderDriverKind | null;
   readonly displayName: string;
   readonly accentColor?: string | undefined;
   readonly showBadge: boolean;
+  readonly delegatedDrivers: ReadonlyArray<ProviderDriverKind>;
 }
 
 /**
@@ -26,9 +28,16 @@ export function resolveThreadProviderInstance(
   thread: EnvironmentThreadShell,
 ): ThreadRowProviderInstance | null {
   const providers = serverConfigs.get(thread.environmentId)?.providers ?? [];
-  const instanceId = thread.session?.providerInstanceId ?? thread.modelSelection.instanceId;
-  const snapshot = providers.find((provider) => provider.instanceId === instanceId);
-  if (!snapshot) return null;
+  const identity = resolveThreadProviderIdentity(thread, providers);
+  if (identity.controller.kind === "unknown") {
+    return {
+      driverKind: null,
+      displayName: identity.controller.displayName,
+      showBadge: false,
+      delegatedDrivers: [],
+    };
+  }
+  const snapshot = identity.controller.provider;
   const entry = {
     driverKind: snapshot.driver,
     displayName: resolveProviderInstanceDisplayName(snapshot),
@@ -36,6 +45,7 @@ export function resolveThreadProviderInstance(
   };
   return {
     ...entry,
+    delegatedDrivers: identity.delegatedDrivers,
     showBadge: shouldShowInstanceBadge(
       entry,
       providers.map((provider) => ({ driverKind: provider.driver })),
@@ -56,8 +66,11 @@ export function createThreadRowProviderInstanceResolver(
 ): (thread: EnvironmentThreadShell) => ThreadRowProviderInstance | null {
   const cache = new Map<string, ThreadRowProviderInstance | null>();
   return (thread) => {
-    const instanceId = thread.session?.providerInstanceId ?? thread.modelSelection.instanceId;
-    const cacheKey = `${thread.environmentId}|${instanceId ?? ""}`;
+    const instanceId = thread.modelSelection.instanceId;
+    const identityKey = thread.providerIdentity
+      ? `${thread.providerIdentity.controllerInstanceId}|${thread.providerIdentity.controllerDriver}|${thread.providerIdentity.delegatedDrivers.join(",")}`
+      : "";
+    const cacheKey = `${thread.environmentId}|${instanceId}|${identityKey}`;
     const cached = cache.get(cacheKey);
     if (cached !== undefined) return cached;
     const resolved = resolveThreadProviderInstance(serverConfigs, thread);

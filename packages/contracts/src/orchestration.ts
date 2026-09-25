@@ -23,7 +23,7 @@ import {
   TrimmedString,
   TurnId,
 } from "./baseSchemas.ts";
-import { ProviderInstanceId } from "./providerInstance.ts";
+import { ProviderDriverKind, ProviderInstanceId } from "./providerInstance.ts";
 import {
   PullRequestActor,
   PullRequestChecksState,
@@ -790,6 +790,20 @@ export const ThreadPullRequestLink = Schema.Struct({
 });
 export type ThreadPullRequestLink = typeof ThreadPullRequestLink.Type;
 
+/**
+ * Durable provider identity emitted by orchestration adapters. The controller
+ * remains the thread's model-selection instance; delegated drivers describe
+ * execution providers without replacing that owner in the UI.
+ */
+export const ThreadProviderIdentity = Schema.Struct({
+  controllerInstanceId: ProviderInstanceId,
+  controllerDriver: ProviderDriverKind,
+  delegatedDrivers: Schema.Array(ProviderDriverKind),
+});
+export type ThreadProviderIdentity = typeof ThreadProviderIdentity.Type;
+
+export const THREAD_PROVIDER_IDENTITY_ACTIVITY_KIND = "thread.provider-identity" as const;
+
 export const OrchestrationThread = Schema.Struct({
   id: ThreadId,
   projectId: ProjectId,
@@ -841,6 +855,7 @@ export const OrchestrationThread = Schema.Struct({
   // Pending-only state. Optional so older servers remain compatible.
   titleRegeneration: Schema.optional(Schema.NullOr(ThreadTitleRegeneration)),
   titleState: Schema.optional(Schema.NullOr(ThreadTitleState)),
+  providerIdentity: Schema.optional(ThreadProviderIdentity),
   deletedAt: Schema.NullOr(IsoDateTime),
   messages: Schema.Array(OrchestrationMessage),
   proposedPlans: Schema.Array(OrchestrationProposedPlan).pipe(
@@ -910,6 +925,8 @@ export const OrchestrationThreadShell = Schema.Struct({
   activeOrderKey: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   titleRegeneration: Schema.optional(Schema.NullOr(ThreadTitleRegeneration)),
   titleState: Schema.optional(Schema.NullOr(ThreadTitleState)),
+  // Optional so shells from pre-identity servers and cached snapshots decode.
+  providerIdentity: Schema.optional(ThreadProviderIdentity),
   session: Schema.NullOr(OrchestrationSession),
   latestUserMessageAt: Schema.NullOr(IsoDateTime),
   hasPendingApprovals: Schema.Boolean,

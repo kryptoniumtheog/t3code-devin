@@ -110,6 +110,70 @@ const projectionSnapshotLayer = it.layer(
 );
 
 projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
+  it.effect("projects the latest durable provider identity into shell and detail reads", () =>
+    Effect.gen(function* () {
+      const snapshotQuery = yield* ProjectionSnapshotQuery;
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql`
+        INSERT INTO projection_projects (
+          project_id, title, workspace_root, scripts_json, created_at, updated_at
+        ) VALUES (
+          'provider-identity-project', 'Identity', '/tmp/provider-identity', '[]',
+          '2026-09-25T00:00:00.000Z', '2026-09-25T00:00:00.000Z'
+        )
+      `;
+      yield* sql`
+        INSERT INTO projection_threads (
+          thread_id, project_id, title, model_selection_json, runtime_mode, interaction_mode,
+          created_at, updated_at
+        ) VALUES (
+          'provider-identity-thread', 'provider-identity-project', 'Identity thread',
+          '{"instanceId":"codex","model":"gpt-5.6-sol"}', 'full-access', 'default',
+          '2026-09-25T00:00:01.000Z', '2026-09-25T00:00:01.000Z'
+        )
+      `;
+      yield* sql`
+        INSERT INTO projection_thread_activities (
+          activity_id, thread_id, turn_id, tone, kind, summary, payload_json, sequence, created_at
+        ) VALUES
+          (
+            'provider-identity-1', 'provider-identity-thread', NULL, 'info',
+            'thread.provider-identity', 'Delegated to Devin',
+            '{"controllerInstanceId":"codex","controllerDriver":"codex","delegatedDrivers":["devin"]}',
+            1, '2026-09-25T00:00:02.000Z'
+          ),
+          (
+            'provider-identity-2', 'provider-identity-thread', NULL, 'info',
+            'thread.provider-identity', 'Delegated to Devin and Muse',
+            '{"controllerInstanceId":"codex","controllerDriver":"codex","delegatedDrivers":["devin","opencode"]}',
+            2, '2026-09-25T00:00:03.000Z'
+          )
+      `;
+
+      const expected = {
+        controllerInstanceId: ProviderInstanceId.make("codex"),
+        controllerDriver: "codex",
+        delegatedDrivers: ["devin", "opencode"],
+      };
+      const shell = yield* snapshotQuery.getShellSnapshot();
+      assert.deepEqual(shell.threads[0]?.providerIdentity, expected);
+
+      const singleShell = yield* snapshotQuery.getThreadShellById(
+        ThreadId.make("provider-identity-thread"),
+      );
+      assert.deepEqual(Option.getOrThrow(singleShell).providerIdentity, expected);
+
+      const detail = yield* snapshotQuery.getThreadDetailById(
+        ThreadId.make("provider-identity-thread"),
+      );
+      assert.deepEqual(Option.getOrThrow(detail).providerIdentity, expected);
+
+      yield* sql`DELETE FROM projection_thread_activities WHERE thread_id = 'provider-identity-thread'`;
+      yield* sql`DELETE FROM projection_threads WHERE thread_id = 'provider-identity-thread'`;
+      yield* sql`DELETE FROM projection_projects WHERE project_id = 'provider-identity-project'`;
+    }),
+  );
+
   it.effect("hydrates read model from projection tables and computes snapshot sequence", () =>
     Effect.gen(function* () {
       const snapshotQuery = yield* ProjectionSnapshotQuery;

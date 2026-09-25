@@ -31,6 +31,10 @@ import {
   threadHasOlderTurns,
 } from "@t3tools/client-runtime/state/threads";
 import {
+  delegatedProviderDisplayName,
+  resolveThreadProviderIdentity,
+} from "@t3tools/client-runtime/state/provider-identity";
+import {
   projectScriptCwd,
   projectScriptRuntimeEnv,
   resolveProjectScripts,
@@ -440,7 +444,19 @@ function ThreadRouteContent(
 
   /* ─── Native header theming ──────────────────────────────────────── */
   const usesNativeHeaderGlass = NATIVE_LIQUID_GLASS_SUPPORTED;
+  const providerIdentityLabel = useMemo(() => {
+    if (!selectedThread) return null;
+    const identity = resolveThreadProviderIdentity(
+      selectedThread,
+      routeEnvironmentRuntime?.serverConfig?.providers ?? [],
+    );
+    const delegated = identity.delegatedDrivers.map(delegatedProviderDisplayName);
+    return delegated.length === 0
+      ? identity.controller.displayName
+      : `${identity.controller.displayName} → ${delegated.join(" + ")}`;
+  }, [routeEnvironmentRuntime?.serverConfig?.providers, selectedThread]);
   const headerSubtitle = [
+    providerIdentityLabel,
     selectedThreadProject?.title ?? null,
     selectedEnvironmentConnection?.environmentLabel ?? null,
   ]
