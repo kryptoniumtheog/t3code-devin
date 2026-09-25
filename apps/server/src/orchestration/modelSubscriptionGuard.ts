@@ -1,11 +1,11 @@
 type GuardedModelSelection = {
-  readonly instanceId?: string;
-  readonly model?: string;
+  readonly instanceId?: string | undefined;
+  readonly model?: string | undefined;
 };
 
 type GuardedCommand = {
   readonly type: string;
-  readonly modelSelection?: GuardedModelSelection;
+  readonly modelSelection?: GuardedModelSelection | null | undefined;
 };
 
 type GuardEnvironment = Readonly<Record<string, string | undefined>>;
@@ -18,18 +18,22 @@ export const OPENCODE_GO_MUSE_LIMITS = Object.freeze({
 });
 
 const ENABLED = "T3_EC_MODEL_GUARD_ROUTE";
-const PROVIDER = "T3_EC_MODEL_GUARD_PROVIDER";
-const MODEL = "T3_EC_MODEL_GUARD_MODEL";
-const PROVEN = "T3_EC_MODEL_GUARD_IDENTITY_PROVEN";
-const ELIGIBLE_UNTIL = "T3_EC_MODEL_GUARD_ELIGIBLE_UNTIL";
+const OPENCODE_PROVIDER = "opencode";
+const OPENCODE_MODEL = "opencode-go/muse-spark-1.3-contributor";
+const DEVIN_PROVIDER = "devin";
+const DEVIN_SWE2_FREE_MODEL: string | null = null;
+const DEVIN_ELIGIBLE_UNTIL_EPOCH_MS = 1_791_676_800_000;
+
+export const isDevinEligibilityExpired = (nowEpochMs: number) =>
+  nowEpochMs >= DEVIN_ELIGIBLE_UNTIL_EPOCH_MS;
 
 const guardedCommand = (command: GuardedCommand) =>
   command.type === "thread.create" || command.type === "thread.turn.start";
 
 export function modelSubscriptionGuardFailure(
   command: GuardedCommand,
-  environment: GuardEnvironment = process.env,
-  now: Date = new Date(),
+  environment: GuardEnvironment,
+  nowEpochMs: number,
 ): string | null {
   const route = environment[ENABLED]?.trim();
   if (!route || !guardedCommand(command)) return null;
@@ -38,25 +42,21 @@ export function modelSubscriptionGuardFailure(
     return "Model subscription guard rejected an unknown route.";
   }
 
-  const provider = environment[PROVIDER]?.trim();
-  const model = environment[MODEL]?.trim();
-  if (environment[PROVEN] !== "1" || !provider || !model) {
+  if (route === "devin-swe2-free" && DEVIN_SWE2_FREE_MODEL === null) {
     return "Model subscription guard rejected an unproved provider/model identity.";
   }
 
-  if (route === "devin-swe2-free") {
-    const eligibleUntil = environment[ELIGIBLE_UNTIL]?.trim();
-    const deadline = eligibleUntil ? Date.parse(eligibleUntil) : Number.NaN;
-    if (!Number.isFinite(deadline) || now.getTime() >= deadline) {
-      return "Devin SWE-2 Free eligibility is missing or expired.";
-    }
+  if (route === "devin-swe2-free" && isDevinEligibilityExpired(nowEpochMs)) {
+    return "Devin SWE-2 Free eligibility is expired.";
   }
 
   const selected = command.modelSelection;
   if (!selected?.instanceId || !selected.model) {
     return "Model subscription guard requires an explicit provider and model.";
   }
-  if (selected.instanceId !== provider || selected.model !== model) {
+  const expectedProvider = route === "opencode-go-muse" ? OPENCODE_PROVIDER : DEVIN_PROVIDER;
+  const expectedModel = route === "opencode-go-muse" ? OPENCODE_MODEL : DEVIN_SWE2_FREE_MODEL;
+  if (selected.instanceId !== expectedProvider || selected.model !== expectedModel) {
     return "Model subscription guard rejected a provider/model mismatch or alias.";
   }
 

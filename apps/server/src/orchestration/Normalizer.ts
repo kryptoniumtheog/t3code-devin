@@ -1,4 +1,5 @@
 import * as DateTime from "effect/DateTime";
+import * as Clock from "effect/Clock";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
@@ -84,7 +85,11 @@ export const normalizeDispatchCommand = (command: ClientOrchestrationCommand) =>
     const serverConfig = yield* ServerConfig;
     const workspacePaths = yield* WorkspacePaths.WorkspacePaths;
 
-    const modelGuardFailure = modelSubscriptionGuardFailure(canonicalCommand);
+    const modelGuardFailure = modelSubscriptionGuardFailure(
+      canonicalCommand,
+      process.env,
+      yield* Clock.currentTimeMillis,
+    );
     if (modelGuardFailure) {
       return yield* new OrchestrationDispatchCommandError({ message: modelGuardFailure });
     }
