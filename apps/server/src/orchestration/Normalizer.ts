@@ -22,6 +22,7 @@ import {
 import { ServerConfig } from "../config.ts";
 import { parseBase64DataUrl } from "../imageMime.ts";
 import * as WorkspacePaths from "../workspace/WorkspacePaths.ts";
+import { modelSubscriptionGuardFailure } from "./modelSubscriptionGuard.ts";
 
 export const canonicalizeClientCommandTimestamps = (
   command: ClientOrchestrationCommand,
@@ -82,6 +83,11 @@ export const normalizeDispatchCommand = (command: ClientOrchestrationCommand) =>
     const path = yield* Path.Path;
     const serverConfig = yield* ServerConfig;
     const workspacePaths = yield* WorkspacePaths.WorkspacePaths;
+
+    const modelGuardFailure = modelSubscriptionGuardFailure(canonicalCommand);
+    if (modelGuardFailure) {
+      return yield* new OrchestrationDispatchCommandError({ message: modelGuardFailure });
+    }
 
     const normalizeProjectWorkspaceRoot = (workspaceRoot: string) =>
       workspacePaths.normalizeWorkspaceRoot(workspaceRoot).pipe(
